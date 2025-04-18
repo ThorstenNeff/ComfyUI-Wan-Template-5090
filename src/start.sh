@@ -65,7 +65,6 @@ if [ -f "$FLAG_FILE" ]; then
   sync_bot_repo
 
   echo "▶️  Starting ComfyUI"
-  pip install sageattention
   # group both the main and fallback commands so they share the same log
   nohup python3 "$NETWORK_VOLUME"/ComfyUI/main.py --listen > "$NETWORK_VOLUME"/comfyui_nohup.log 2>&1 &
 
