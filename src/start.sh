@@ -72,6 +72,17 @@ if [ -f "$FLAG_FILE" ]; then
     > \"$NETWORK_VOLUME/comfyui_nohup.log\" 2>&1 &
 
   echo "⏳  Waiting for ComfyUI to be up at $URL…"
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "🔧 curl not found. Installing..."
+    if command -v apt-get >/dev/null 2>&1; then
+      apt-get update && apt-get install -y curl
+    elif command -v yum >/dev/null 2>&1; then
+      yum install -y curl
+    else
+      echo "❌ No supported package manager found. Please install curl manually."
+      exit 1
+    fi
+  fi
   until curl --silent --fail "$URL" --output /dev/null; do
     echo "🔄  Still waiting…"
     sleep 2
