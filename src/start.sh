@@ -4,28 +4,14 @@
 TCMALLOC="$(ldconfig -p | grep -Po "libtcmalloc.so.\d" | head -n 1)"
 export LD_PRELOAD="${TCMALLOC}"
 
-# This is in case there's any special installs or overrides that needs to occur when starting the machine before starting ComfyUI
-if [ -f "/workspace/additional_params.sh" ]; then
-    chmod +x /workspace/additional_params.sh
-    echo "Executing additional_params.sh..."
-    /workspace/additional_params.sh
-else
-    echo "additional_params.sh not found in /workspace. Skipping..."
-fi
-
 # Set the network volume path
 NETWORK_VOLUME="/workspace"
 
 # Check if NETWORK_VOLUME exists; if not, use root directory instead
 if [ ! -d "$NETWORK_VOLUME" ]; then
-    echo "NETWORK_VOLUME directory '$NETWORK_VOLUME' does not exist. You are NOT using a network volume. Setting NETWORK_VOLUME to '/' (root directory)."
     NETWORK_VOLUME="/"
-    echo "NETWORK_VOLUME directory doesn't exist. Starting JupyterLab on root directory..."
-    jupyter-lab --ip=0.0.0.0 --allow-root --no-browser --NotebookApp.token='' --NotebookApp.password='' --ServerApp.allow_origin='*' --ServerApp.allow_credentials=True --notebook-dir=/ &
-else
-    echo "NETWORK_VOLUME directory exists. Starting JupyterLab..."
-    jupyter-lab --ip=0.0.0.0 --allow-root --no-browser --NotebookApp.token='' --NotebookApp.password='' --ServerApp.allow_origin='*' --ServerApp.allow_credentials=True --notebook-dir=/workspace &
 fi
+
 
 FLAG_FILE="$NETWORK_VOLUME/.comfyui_initialized"
 COMFYUI_DIR="$NETWORK_VOLUME/ComfyUI"
@@ -69,6 +55,7 @@ sync_bot_repo() {
 }
 
 if [ -f "$FLAG_FILE" ]; then
+  echo "FLAG FILE FOUND"
   sync_bot_repo
   echo "Starting ComfyUI"
   if [ "${enable_optimizations:-true}" = "false" ]; then
@@ -80,6 +67,8 @@ if [ -f "$FLAG_FILE" ]; then
         python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen
       }
   fi
+  echo "Starting worker"
+  nohup python3 "$NETWORK_VOLUME"/comfyui-discord-bot/worker.py > "$NETWORK_VOLUME"/worker.log 2>&1 &
   exit 0
 fi
 
