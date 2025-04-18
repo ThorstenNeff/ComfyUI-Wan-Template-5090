@@ -242,7 +242,7 @@ echo "Finished downloading models!"
 
 declare -A MODEL_CATEGORIES=(
     ["$NETWORK_VOLUME/ComfyUI/models/checkpoints"]="CHECKPOINT_IDS_TO_DOWNLOAD"
-    ["$NETWORK_VOLUME/ComfyUI/models/loras"]="LORAS_IDS_TO_DOWNLOAD"
+    ["$NETWORK_VOLUME/ComfyUI/models/loras"]="LORASs_IDS_TO_DOWNLOAD"
 )
 
 # Ensure directories exist and download models
@@ -287,7 +287,7 @@ nohup python3 "$NETWORK_VOLUME"/comfyui-discord-bot/worker.py > "$NETWORK_VOLUME
 
 # Start ComfyUI
 echo "Starting ComfyUI"
-if [ "$enable_optimizations" = "false" ]; then
+if [ "$enable_optimizations" = "true" ]; then
     python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen
     touch "$FLAG_FILE"
 else
