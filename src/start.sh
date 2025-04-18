@@ -294,6 +294,7 @@ if [ "$enable_optimizations" = "false" ]; then
     touch "$FLAG_FILE"
 else
     python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen --use-sage-attention
+    touch "$FLAG_FILE"
     if [ $? -ne 0 ]; then
         echo "ComfyUI failed with --use-sage-attention. Retrying without it..."
         python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen
