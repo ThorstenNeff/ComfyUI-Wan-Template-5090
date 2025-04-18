@@ -67,9 +67,7 @@ if [ -f "$FLAG_FILE" ]; then
   echo "▶️  Starting ComfyUI"
   pip install sageattention
   # group both the main and fallback commands so they share the same log
-  nohup bash -c python3 $NETWORK_VOLUME/ComfyUI/main.py --listen --use-sage-attention \
-    || python3 $NETWORK_VOLUME/ComfyUI/main.py --listen \
-    > $NETWORK_VOLUME/comfyui_nohup.log 2>&1 &
+  nohup bash -c python3 "$NETWORK_VOLUME"/ComfyUI/main.py --listen > $NETWORK_VOLUME/comfyui_nohup.log 2>&1 &
 
   echo "⏳  Waiting for ComfyUI to be up at $URL…"
   if ! command -v curl >/dev/null 2>&1; then
