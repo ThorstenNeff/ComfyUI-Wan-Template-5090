@@ -10,6 +10,7 @@ NETWORK_VOLUME="/workspace"
 # Check if NETWORK_VOLUME exists; if not, use root directory instead
 if [ ! -d "$NETWORK_VOLUME" ]; then
     NETWORK_VOLUME="/"
+    echo "Settings network volume to $NETWORK_VOLUME"
 fi
 
 
@@ -37,8 +38,6 @@ sync_bot_repo() {
     cd "$REPO_DIR"
     pip install --upgrade -r requirements.txt
     echo "Dependencies installed"
-
-    mv "$REPO_DIR/Potrait01.png" "$NETWORK_VOLUME/ComfyUI/input/" || true
     cd /
   else
     echo "Updating existing repo in $REPO_DIR"
@@ -49,7 +48,6 @@ sync_bot_repo() {
 
     echo "🐍 Re‑installing any updated deps…"
     pip install --upgrade -r requirements.txt
-    # mv "$REPO_DIR/Potrait01.png" "$NETWORK_VOLUME/ComfyUI/input/"  # optional
     cd /
   fi
 }
@@ -93,7 +91,7 @@ pip install onnxruntime-gpu
 
 
 
-if [ "$enable_optimizations" == "true" ]; then
+if [ "$enable_optimizations" == "false" ]; then
 echo "Downloading SageAttention"
 git clone https://github.com/thu-ml/SageAttention.git
 cd SageAttention
