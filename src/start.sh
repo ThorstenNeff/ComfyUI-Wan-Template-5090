@@ -54,6 +54,8 @@ sync_bot_repo() {
 
 if [ -f "$FLAG_FILE" ]; then
   echo "FLAG FILE FOUND"
+  echo "cd $NETWORK_VOLUME" >> ~/.bashrc
+  echo "cd $NETWORK_VOLUME" >> ~/.bash_profile
   sync_bot_repo
   echo "Starting ComfyUI"
   if [ "${enable_optimizations:-true}" = "false" ]; then
@@ -91,7 +93,7 @@ pip install onnxruntime-gpu
 
 
 
-if [ "$enable_optimizations" == "false" ]; then
+if [ "$enable_optimizations" == "true" ]; then
 echo "Downloading SageAttention"
 git clone https://github.com/thu-ml/SageAttention.git
 cd SageAttention
@@ -242,7 +244,7 @@ echo "Finished downloading models!"
 
 declare -A MODEL_CATEGORIES=(
     ["$NETWORK_VOLUME/ComfyUI/models/checkpoints"]="CHECKPOINT_IDS_TO_DOWNLOAD"
-    ["$NETWORK_VOLUME/ComfyUI/models/loras"]="LORASs_IDS_TO_DOWNLOAD"
+    ["$NETWORK_VOLUME/ComfyUI/models/loras"]="LORAS_IDS_TO_DOWNLOAD"
 )
 
 # Ensure directories exist and download models
@@ -287,15 +289,15 @@ nohup python3 "$NETWORK_VOLUME"/comfyui-discord-bot/worker.py > "$NETWORK_VOLUME
 
 # Start ComfyUI
 echo "Starting ComfyUI"
-if [ "$enable_optimizations" = "true" ]; then
+if [ "$enable_optimizations" = "false" ]; then
+    touch "$FLAG_FILE"
     python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen
-    touch "$FLAG_FILE"
 else
-    python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen --use-sage-attention
     touch "$FLAG_FILE"
+    python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen --use-sage-attention
     if [ $? -ne 0 ]; then
         echo "ComfyUI failed with --use-sage-attention. Retrying without it..."
-        python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen
         touch "$FLAG_FILE"
+        python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen
     fi
 fi
