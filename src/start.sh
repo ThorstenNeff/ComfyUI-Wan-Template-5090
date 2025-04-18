@@ -80,6 +80,7 @@ if [ -f "$FLAG_FILE" ]; then
         python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen
       }
   fi
+  exit 0
 fi
 
 # Set the target directory
