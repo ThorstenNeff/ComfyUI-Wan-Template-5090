@@ -4,6 +4,8 @@
 TCMALLOC="$(ldconfig -p | grep -Po "libtcmalloc.so.\d" | head -n 1)"
 export LD_PRELOAD="${TCMALLOC}"
 
+set -euo pipefail
+
 # Set the network volume path
 NETWORK_VOLUME="/workspace"
 
@@ -53,25 +55,37 @@ sync_bot_repo() {
 }
 
 if [ -f "$FLAG_FILE" ]; then
+  URL="http://127.0.0.1:8188"
   echo "FLAG FILE FOUND"
-  echo "cd $NETWORK_VOLUME" >> ~/.bashrc
-  echo "cd $NETWORK_VOLUME" >> ~/.bash_profile
+
+  # Add cd $NETWORK_VOLUME to shell startup if not already present
+  grep -qxF "cd $NETWORK_VOLUME" ~/.bashrc || echo "cd $NETWORK_VOLUME" >> ~/.bashrc
+  grep -qxF "cd $NETWORK_VOLUME" ~/.bash_profile || echo "cd $NETWORK_VOLUME" >> ~/.bash_profile
+
   sync_bot_repo
-  echo "Starting ComfyUI"
-  if [ "${enable_optimizations:-true}" = "false" ]; then
-    python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen
-  else
-    python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen --use-sage-attention \
-      || {
-        echo "ComfyUI failed with --use-sage-attention. Retrying plain launch..."
-        python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen
-      }
-  fi
-  echo "Starting worker"
-  nohup python3 "$NETWORK_VOLUME"/comfyui-discord-bot/worker.py > "$NETWORK_VOLUME"/worker.log 2>&1 &
-  exit 0
+
+  echo "▶️  Starting ComfyUI"
+  # group both the main and fallback commands so they share the same log
+  nohup bash -c \
+  "{ python3 \"$NETWORK_VOLUME/ComfyUI/main.py\" --listen --use-sage-attention \
+     || python3 \"$NETWORK_VOLUME/ComfyUI/main.py\" --listen; }" \
+    > \"$NETWORK_VOLUME/comfyui_nohup.log\" 2>&1 &
+
+  echo "⏳  Waiting for ComfyUI to be up at $URL…"
+  until curl --silent --fail "$URL" --output /dev/null; do
+    echo "🔄  Still waiting…"
+    sleep 2
+  done
+
+  echo "✅  ComfyUI is up! Starting worker!"
+  nohup python3 "$NETWORK_VOLUME/comfyui-discord-bot/worker.py" \
+    > "$NETWORK_VOLUME/worker.log" 2>&1 &
+
+  # Wait on background jobs forever
+  wait
+
 else
-  echo "NO FLAG FILE FOUND"
+  echo "NO FLAG FILE FOUND – skipping startup"
 fi
 
 # Set the target directory
@@ -289,15 +303,13 @@ nohup python3 "$NETWORK_VOLUME"/comfyui-discord-bot/worker.py > "$NETWORK_VOLUME
 
 # Start ComfyUI
 echo "Starting ComfyUI"
+touch "$FLAG_FILE"
 if [ "$enable_optimizations" = "false" ]; then
-    touch "$FLAG_FILE"
     python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen
 else
-    touch "$FLAG_FILE"
     python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen --use-sage-attention
     if [ $? -ne 0 ]; then
         echo "ComfyUI failed with --use-sage-attention. Retrying without it..."
-        touch "$FLAG_FILE"
         python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen
     fi
 fi
