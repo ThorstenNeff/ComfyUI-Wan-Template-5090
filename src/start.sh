@@ -29,18 +29,57 @@ fi
 
 FLAG_FILE="$NETWORK_VOLUME/.comfyui_initialized"
 COMFYUI_DIR="$NETWORK_VOLUME/ComfyUI"
-WORKFLOW_DIR="$NETWORK_VOLUME/ComfyUI/user/default/workflows"
+REPO_DIR="$NETWORK_VOLUME/comfyui-discord-bot"
+
+sync_bot_repo() {
+  # pick branch based on IS_DEV
+  if [ "${IS_DEV:-false}" = "true" ]; then
+    BRANCH="dev"
+  else
+    BRANCH="master"
+  fi
+
+  echo "Syncing bot repo (branch: $BRANCH)…"
+  if [ ! -d "$REPO_DIR" ]; then
+    echo "Cloning '$BRANCH' into $REPO_DIR"
+    git clone --branch "$BRANCH" \
+      "https://${GITHUB_PAT}@github.com/Hearmeman24/comfyui-discord-bot.git" \
+      "$REPO_DIR"
+    echo "Clone complete"
+
+    echo "Installing Python deps…"
+    cd "$REPO_DIR"
+    pip install --upgrade -r requirements.txt
+    echo "Dependencies installed"
+
+    mv "$REPO_DIR/Potrait01.png" "$NETWORK_VOLUME/ComfyUI/input/" || true
+    cd /
+  else
+    echo "Updating existing repo in $REPO_DIR"
+    cd "$REPO_DIR"
+    git fetch origin
+    git checkout "$BRANCH"
+    git pull origin "$BRANCH"
+
+    echo "🐍 Re‑installing any updated deps…"
+    pip install --upgrade -r requirements.txt
+    # mv "$REPO_DIR/Potrait01.png" "$NETWORK_VOLUME/ComfyUI/input/"  # optional
+    cd /
+  fi
+}
 
 if [ -f "$FLAG_FILE" ]; then
-  if [ "$enable_optimizations" = "false" ]; then
+  sync_bot_repo
+  echo "Starting ComfyUI"
+  if [ "${enable_optimizations:-true}" = "false" ]; then
     python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen
-else
-    python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen --use-sage-attention
-    if [ $? -ne 0 ]; then
-        echo "ComfyUI failed with --use-sage-attention. Retrying without it..."
+  else
+    python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen --use-sage-attention \
+      || {
+        echo "ComfyUI failed with --use-sage-attention. Retrying plain launch..."
         python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen
-    fi
-fi
+      }
+  fi
 fi
 
 # Set the target directory
@@ -72,21 +111,11 @@ echo "Downloading Triton"
 pip install triton
 fi
 
+
 REPO_DIR="$NETWORK_VOLUME/comfyui-discord-bot"
 
-if [ ! -d "$REPO_DIR" ]; then
-  echo "Cloning bot into $REPO_DIR…"
-  git clone "https://${GITHUB_PAT}@github.com/Hearmeman24/comfyui-discord-bot.git" "$REPO_DIR"
-  echo "Clone complete"
+# Determine which branch to use
 
-  echo "Installing Python deps…"
-  cd "$REPO_DIR"
-  pip install --upgrade -r requirements.txt
-  echo "Dependencies installed"
-
-  mv $REPO_DIR/Potrait01.png /$NETWORK_VOLUME/ComfyUI/input
-  cd /
-fi
 
 # Change to the directory
 cd "$CUSTOM_NODES_DIR" || exit 1
@@ -248,6 +277,7 @@ done
 
 # Workspace as main working directory
 echo "cd $NETWORK_VOLUME" >> ~/.bashrc
+echo "cd $NETWORK_VOLUME" >> ~/.bash_profile
 
 if [ ! -d "$NETWORK_VOLUME/ComfyUI/custom_nodes/ComfyUI-KJNodes" ]; then
     cd $NETWORK_VOLUME/ComfyUI/custom_nodes
