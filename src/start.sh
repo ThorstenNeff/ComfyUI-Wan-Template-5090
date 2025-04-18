@@ -70,6 +70,8 @@ if [ -f "$FLAG_FILE" ]; then
   echo "Starting worker"
   nohup python3 "$NETWORK_VOLUME"/comfyui-discord-bot/worker.py > "$NETWORK_VOLUME"/worker.log 2>&1 &
   exit 0
+else
+  echo "NO FLAG FILE FOUND"
 fi
 
 # Set the target directory
