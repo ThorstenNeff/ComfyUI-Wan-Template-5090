@@ -93,9 +93,10 @@ if [ -f "$FLAG_FILE" ]; then
   wait
 
 else
-  echo "NO FLAG FILE FOUND – skipping startup"
+  echo "NO FLAG FILE FOUND – starting initial setup"
 fi
 
+sync_bot_repo
 # Set the target directory
 CUSTOM_NODES_DIR="$NETWORK_VOLUME/ComfyUI/custom_nodes"
 
@@ -119,9 +120,6 @@ if [ "$enable_optimizations" == "true" ]; then
 echo "Downloading Triton"
 pip install triton
 fi
-
-
-REPO_DIR="$NETWORK_VOLUME/comfyui-discord-bot"
 
 # Determine which branch to use
 
