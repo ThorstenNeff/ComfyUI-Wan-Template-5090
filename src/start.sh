@@ -183,26 +183,6 @@ if [ "$download_480p_native_models" == "true" ]; then
     "Comfy-Org/Wan_2.1_ComfyUI_repackaged" "split_files/diffusion_models/wan2.1_t2v_1.3B_fp16.safetensors"
 fi
 
-# Handle full download (with SDXL)
-if [ "$download_wan_fun_and_sdxl_helper" == "true" ]; then
-  echo "Downloading Wan Fun 1.3B Model"
-
-  download_model "$DIFFUSION_MODELS_DIR" "Wan2.1-Fun-Control1.3B.safetensors" \
-    "alibaba-pai/Wan2.1-Fun-1.3B-Control" "diffusion_pytorch_model.safetensors"
-
-  echo "Downloading Wan Fun 14B Model"
-
-  download_model "$DIFFUSION_MODELS_DIR" "Wan2.1-Fun-Control14B.safetensors" \
-    "alibaba-pai/Wan2.1-Fun-14B-Control" "diffusion_pytorch_model.safetensors"
-
-  UNION_DIR="$NETWORK_VOLUME/ComfyUI/models/controlnet/SDXL/controlnet-union-sdxl-1.0"
-  mkdir -p "$UNION_DIR"
-  if [ ! -f "$UNION_DIR/diffusion_pytorch_model_promax.safetensors" ]; then
-    download_model "$UNION_DIR" "diffusion_pytorch_model_promax.safetensors" \
-    "xinsir/controlnet-union-sdxl-1.0" "diffusion_pytorch_model_promax.safetensors"
-  fi
-fi
-
 # Download 480p native models
 if [ "$download_480p_debug" == "true" ]; then
   echo "Downloading 480p native models..."
@@ -300,19 +280,15 @@ fi
 # Install dependencies
 pip install --no-cache-dir -r $NETWORK_VOLUME/ComfyUI/custom_nodes/ComfyUI-KJNodes/requirements.txt
 
-
-echo "Starting worker"
-nohup python3 "$NETWORK_VOLUME"/comfyui-discord-bot/worker.py > "$NETWORK_VOLUME"/worker.log 2>&1 &
-
-# Start ComfyUI
 echo "Starting ComfyUI"
 touch "$FLAG_FILE"
-if [ "$enable_optimizations" = "false" ]; then
-    python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen
-else
-    python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen --use-sage-attention
-    if [ $? -ne 0 ]; then
-        echo "ComfyUI failed with --use-sage-attention. Retrying without it..."
-        python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen
-    fi
-fi
+nohup python3 "$NETWORK_VOLUME"/ComfyUI/main.py --listen > "$NETWORK_VOLUME"/comfyui_nohup.log 2>&1 &
+
+until curl --silent --fail "$URL" --output /dev/null; do
+    echo "🔄  Still waiting…"
+    sleep 2
+done
+echo "ComfyUI is UP Starting worker"
+nohup python3 "$NETWORK_VOLUME"/comfyui-discord-bot/worker.py > "$NETWORK_VOLUME"/worker.log 2>&1 &
+
+wait
