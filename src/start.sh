@@ -4,8 +4,8 @@
 TCMALLOC="$(ldconfig -p | grep -Po "libtcmalloc.so.\d" | head -n 1)"
 export LD_PRELOAD="${TCMALLOC}"
 
-set -euo pipefail
-
+set -eo pipefail
+set +u
 # Set the network volume path
 NETWORK_VOLUME="/workspace"
 
