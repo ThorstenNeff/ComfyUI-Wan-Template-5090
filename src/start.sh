@@ -116,11 +116,6 @@ pip install onnxruntime-gpu
 
 
 if [ "$enable_optimizations" == "true" ]; then
-echo "Downloading SageAttention"
-git clone https://github.com/thu-ml/SageAttention.git
-cd SageAttention
-python3 setup.py install
-cd /
 echo "Downloading Triton"
 pip install triton
 fi
