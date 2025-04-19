@@ -19,6 +19,7 @@ fi
 FLAG_FILE="$NETWORK_VOLUME/.comfyui_initialized"
 COMFYUI_DIR="$NETWORK_VOLUME/ComfyUI"
 REPO_DIR="$NETWORK_VOLUME/comfyui-discord-bot"
+URL="http://127.0.0.1:8188"
 
 sync_bot_repo() {
   # pick branch based on IS_DEV
@@ -55,7 +56,6 @@ sync_bot_repo() {
 }
 
 if [ -f "$FLAG_FILE" ]; then
-  URL="http://127.0.0.1:8188"
   echo "FLAG FILE FOUND"
 
   # Add cd $NETWORK_VOLUME to shell startup if not already present
