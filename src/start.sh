@@ -48,7 +48,7 @@ else
 fi
 
 echo "Using NETWORK_VOLUME: $NETWORK_VOLUME"
-
+pip install runpod
 FLAG_FILE="$NETWORK_VOLUME/.comfyui_initialized"
 COMFYUI_DIR="$NETWORK_VOLUME/ComfyUI"
 REPO_DIR="$NETWORK_VOLUME/comfyui-discord-bot"
