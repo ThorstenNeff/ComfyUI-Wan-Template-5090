@@ -34,13 +34,20 @@ report_status() {
 }
 report_status false "Starting initialization"
 # Set the network volume path
-NETWORK_VOLUME="/workspace"
-
-# Check if NETWORK_VOLUME exists; if not, use root directory instead
-if [ ! -d "$NETWORK_VOLUME" ]; then
-    NETWORK_VOLUME="/"
-    echo "Settings network volume to $NETWORK_VOLUME"
+# Determine the network volume based on environment
+if [ -n "${RUNPOD_POD_ID}" ]; then
+    NETWORK_VOLUME="/workspace"
+else
+    NETWORK_VOLUME="/runpod-volume"
 fi
+
+# Fallback to root if neither directory exists
+if [ ! -d "$NETWORK_VOLUME" ]; then
+    echo "Warning: $NETWORK_VOLUME does not exist, falling back to root directory"
+    NETWORK_VOLUME="/"
+fi
+
+echo "Using NETWORK_VOLUME: $NETWORK_VOLUME"
 
 FLAG_FILE="$NETWORK_VOLUME/.comfyui_initialized"
 COMFYUI_DIR="$NETWORK_VOLUME/ComfyUI"
