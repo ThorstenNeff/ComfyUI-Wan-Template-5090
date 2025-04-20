@@ -261,9 +261,10 @@ mkdir -p "$NETWORK_VOLUME/ComfyUI/models/loras" && \
 echo "Download failed for Wan_ClothesOnOff_Trend.safetensors, continuing...")
 
 
+
 declare -A MODEL_CATEGORY_FILES=(
-    ["$NETWORK_VOLUME/comfyui-discord-bot/downloads"]="checkpoint_to_download.txt"
-    ["$NETWORK_VOLUME/comfyui-discord-bot/downloads"]="lora_to_download.txt"
+    ["$NETWORK_VOLUME/ComfyUI/models/checkpoints"]="$NETWORK_VOLUME/comfyui-discord-bot/downloads/checkpoint_to_download.txt"
+    ["$NETWORK_VOLUME/ComfyUI/models/loras"]="$NETWORK_VOLUME/comfyui-discord-bot/downloads/lora_to_download.txt"
 )
 
 # Ensure directories exist and download models
