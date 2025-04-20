@@ -92,10 +92,6 @@ sync_bot_repo() {
 if [ -f "$FLAG_FILE" ]; then
   echo "FLAG FILE FOUND"
 
-  # Add cd $NETWORK_VOLUME to shell startup if not already present
-  grep -qxF "cd $NETWORK_VOLUME" ~/.bashrc || echo "cd $NETWORK_VOLUME" >> ~/.bashrc
-  grep -qxF "cd $NETWORK_VOLUME" ~/.bash_profile || echo "cd $NETWORK_VOLUME" >> ~/.bash_profile
-
   sync_bot_repo
 
   echo "▶️  Starting ComfyUI"
