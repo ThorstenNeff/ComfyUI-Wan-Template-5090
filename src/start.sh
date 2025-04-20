@@ -82,10 +82,6 @@ sync_bot_repo() {
     git fetch origin
     git checkout "$BRANCH"
     git pull origin "$BRANCH"
-
-    echo "🐍 Re‑installing any updated deps…"
-    pip install --upgrade -r requirements.txt
-    cd /
   fi
 }
 
