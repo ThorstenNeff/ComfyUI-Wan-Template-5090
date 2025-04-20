@@ -18,7 +18,7 @@ fi
 URL="http://127.0.0.1:8188"
 
 # Function to report pod status
-report_status() {
+  report_status() {
     local status=$1
     local details=$2
 
