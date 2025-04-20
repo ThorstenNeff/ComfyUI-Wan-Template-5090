@@ -254,19 +254,34 @@ fi
 
 echo "Finished downloading models!"
 
-declare -A MODEL_CATEGORIES=(
-    ["$NETWORK_VOLUME/ComfyUI/models/checkpoints"]="CHECKPOINT_IDS_TO_DOWNLOAD"
-    ["$NETWORK_VOLUME/ComfyUI/models/loras"]="LORAS_IDS_TO_DOWNLOAD"
+echo "Downloading LoRAs"
+
+mkdir -p "$NETWORK_VOLUME/ComfyUI/models/loras" && \
+(gdown "1IfTa_Z_SSDFz7x0ootJu293qsxf19FEZ" -O "$NETWORK_VOLUME/ComfyUI/models/loras/Wan_ClothesOnOff_Trend.safetensors" || \
+echo "Download failed for Wan_ClothesOnOff_Trend.safetensors, continuing...")
+
+
+declare -A MODEL_CATEGORY_FILES=(
+    ["$NETWORK_VOLUME/comfyui-discord-bot/downloads"]="checkpoint_to_download.txt"
+    ["$NETWORK_VOLUME/comfyui-discord-bot/downloads"]="lora_to_download.txt"
 )
 
 # Ensure directories exist and download models
-for TARGET_DIR in "${!MODEL_CATEGORIES[@]}"; do
-    ENV_VAR_NAME="${MODEL_CATEGORIES[$TARGET_DIR]}"
-    MODEL_IDS_STRING="${!ENV_VAR_NAME}"  # Get the value of the environment variable
+for TARGET_DIR in "${!MODEL_CATEGORY_FILES[@]}"; do
+    CONFIG_FILE="${MODEL_CATEGORY_FILES[$TARGET_DIR]}"
 
-    # Skip if the environment variable is set to "ids_here"
-    if [ "$MODEL_IDS_STRING" == "replace_with_ids" ]; then
-        echo "Skipping downloads for $TARGET_DIR ($ENV_VAR_NAME is 'ids_here')"
+    # Skip if the file doesn't exist
+    if [ ! -f "$CONFIG_FILE" ]; then
+        echo "Skipping downloads for $TARGET_DIR (file $CONFIG_FILE not found)"
+        continue
+    fi
+
+    # Read comma-separated model IDs from the file
+    MODEL_IDS_STRING=$(cat "$CONFIG_FILE")
+
+    # Skip if the file is empty or contains placeholder text
+    if [ -z "$MODEL_IDS_STRING" ] || [ "$MODEL_IDS_STRING" == "replace_with_ids" ]; then
+        echo "Skipping downloads for $TARGET_DIR ($CONFIG_FILE is empty or contains placeholder)"
         continue
     fi
 
