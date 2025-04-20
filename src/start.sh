@@ -35,15 +35,15 @@ report_status() {
 report_status false "Starting initialization"
 # Set the network volume path
 # Determine the network volume based on environment
-if [ -n "${RUNPOD_POD_ID}" ]; then
+# Check if /workspace exists
+if [ -d "/workspace" ]; then
     NETWORK_VOLUME="/workspace"
-else
+# If not, check if /runpod-volume exists
+elif [ -d "/runpod-volume" ]; then
     NETWORK_VOLUME="/runpod-volume"
-fi
-
 # Fallback to root if neither directory exists
-if [ ! -d "$NETWORK_VOLUME" ]; then
-    echo "Warning: $NETWORK_VOLUME does not exist, falling back to root directory"
+else
+    echo "Warning: Neither /workspace nor /runpod-volume exists, falling back to root directory"
     NETWORK_VOLUME="/"
 fi
 
