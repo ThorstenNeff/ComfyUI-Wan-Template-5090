@@ -314,15 +314,20 @@ pip install --no-cache-dir -r $NETWORK_VOLUME/ComfyUI/custom_nodes/ComfyUI-KJNod
 
 echo "Starting ComfyUI"
 touch "$FLAG_FILE"
-nohup python3 "$NETWORK_VOLUME"/ComfyUI/main.py --listen > "$NETWORK_VOLUME"/comfyui_nohup.log 2>&1 &
+nohup python3 "$NETWORK_VOLUME"/ComfyUI/main.py --listen 2>&1 | tee "$NETWORK_VOLUME"/comfyui_nohup.log &
+COMFY_PID=$!
 
 until curl --silent --fail "$URL" --output /dev/null; do
     echo "🔄  Still waiting…"
     sleep 2
 done
+
 echo "ComfyUI is UP Starting worker"
-nohup python3 "$NETWORK_VOLUME"/comfyui-discord-bot/worker.py > "$NETWORK_VOLUME"/worker.log 2>&1 &
+nohup python3 "$NETWORK_VOLUME"/comfyui-discord-bot/worker.py 2>&1 | tee "$NETWORK_VOLUME"/worker.log &
+WORKER_PID=$!
+
 report_status true "Pod fully initialized and ready for processing"
 echo "Initialization complete! Pod is ready to process jobs."
 
-wait
+# Wait for both processes
+wait $COMFY_PID $WORKER_PID
