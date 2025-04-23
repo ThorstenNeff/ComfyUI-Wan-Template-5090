@@ -105,15 +105,7 @@ if [ -f "$FLAG_FILE" ]; then
   echo "▶️  Starting ComfyUI"
   # group both the main and fallback commands so they share the same log
   mkdir -p "$NETWORK_VOLUME/${RUNPOD_POD_ID}"
-
-  # Check if IS_DEV flag is set for Ubuntu 24.04 / Python 3.12 compatibility
-  if [ "$IS_DEV" = "true" ]; then
-    echo "🐍 Using Python 3.12 from virtual environment (Ubuntu 24.04 compatibility mode)"
-    nohup bash -c "/opt/venv/bin/python \"$NETWORK_VOLUME\"/ComfyUI/main.py --listen 2>&1 | tee \"$NETWORK_VOLUME\"/comfyui_\"$RUNPOD_POD_ID\"_nohup.log" &
-  else
-    echo "🐍 Using system Python 3"
-    nohup bash -c "python3 \"$NETWORK_VOLUME\"/ComfyUI/main.py --listen 2>&1 | tee \"$NETWORK_VOLUME\"/comfyui_\"$RUNPOD_POD_ID\"_nohup.log" &
-  fi
+  nohup bash -c "python3 \"$NETWORK_VOLUME\"/ComfyUI/main.py --listen 2>&1 | tee \"$NETWORK_VOLUME\"/comfyui_\"$RUNPOD_POD_ID\"_nohup.log" &
 
   until curl --silent --fail "$URL" --output /dev/null; do
       echo "🔄  Still waiting…"
@@ -121,15 +113,7 @@ if [ -f "$FLAG_FILE" ]; then
   done
 
   echo "ComfyUI is UP Starting worker"
-
-  # Also use the virtual environment for the worker if in dev mode
-  if [ "$IS_DEV" = "true" ]; then
-    echo "🐍 Starting worker with Python 3.12 from virtual environment"
-    nohup bash -c "/opt/venv/bin/python \"$REPO_DIR\"/worker.py 2>&1 | tee \"$NETWORK_VOLUME\"/\"$RUNPOD_POD_ID\"/worker.log" &
-  else
-    echo "🐍 Starting worker with system Python 3"
-    nohup bash -c "python3 \"$REPO_DIR\"/worker.py 2>&1 | tee \"$NETWORK_VOLUME\"/\"$RUNPOD_POD_ID\"/worker.log" &
-  fi
+  nohup bash -c "python3 \"$REPO_DIR\"/worker.py 2>&1 | tee \"$NETWORK_VOLUME\"/\"$RUNPOD_POD_ID\"/worker.log" &
 
   report_status true "Pod fully initialized and ready for processing"
   echo "Initialization complete! Pod is ready to process jobs."
@@ -330,14 +314,8 @@ pip install --no-cache-dir -r $NETWORK_VOLUME/ComfyUI/custom_nodes/ComfyUI-KJNod
 echo "Starting ComfyUI"
 touch "$FLAG_FILE"
 mkdir -p "$NETWORK_VOLUME/${RUNPOD_POD_ID}"
-
-if [ "$IS_DEV" = "true" ]; then
-  echo "🐍 Using Python 3.12 from virtual environment (Ubuntu 24.04 compatibility mode)"
-  nohup bash -c "/opt/venv/bin/python \"$NETWORK_VOLUME\"/ComfyUI/main.py --listen 2>&1 | tee \"$NETWORK_VOLUME\"/comfyui_\"$RUNPOD_POD_ID\"_nohup.log" &
-else
-  echo "🐍 Using system Python 3"
-  nohup bash -c "python3 \"$NETWORK_VOLUME\"/ComfyUI/main.py --listen 2>&1 | tee \"$NETWORK_VOLUME\"/comfyui_\"$RUNPOD_POD_ID\"_nohup.log" &
-fi
+nohup bash -c "python3 \"$NETWORK_VOLUME\"/ComfyUI/main.py --listen 2>&1 | tee \"$NETWORK_VOLUME\"/comfyui_\"$RUNPOD_POD_ID\"_nohup.log" &
+COMFY_PID=$!
 
 until curl --silent --fail "$URL" --output /dev/null; do
     echo "🔄  Still waiting…"
@@ -345,18 +323,9 @@ until curl --silent --fail "$URL" --output /dev/null; do
 done
 
 echo "ComfyUI is UP Starting worker"
+nohup bash -c "python3 \"$REPO_DIR\"/worker.py 2>&1 | tee \"$NETWORK_VOLUME\"/\"$RUNPOD_POD_ID\"/worker.log" &
+WORKER_PID=$!
 
-# Also use the virtual environment for the worker if in dev mode
-if [ "$IS_DEV" = "true" ]; then
-  echo "🐍 Starting worker with Python 3.12 from virtual environment"
-  nohup bash -c "/opt/venv/bin/python \"$REPO_DIR\"/worker.py 2>&1 | tee \"$NETWORK_VOLUME\"/\"$RUNPOD_POD_ID\"/worker.log" &
-else
-  echo "🐍 Starting worker with system Python 3"
-  nohup bash -c "python3 \"$REPO_DIR\"/worker.py 2>&1 | tee \"$NETWORK_VOLUME\"/\"$RUNPOD_POD_ID\"/worker.log" &
-fi
-
-
-WORKER_PID=$! COMFY_PID=$!
 report_status true "Pod fully initialized and ready for processing"
 echo "Initialization complete! Pod is ready to process jobs."
 # Wait for both processes
