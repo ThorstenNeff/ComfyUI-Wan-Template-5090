@@ -298,11 +298,11 @@ pip install --no-cache-dir -r $NETWORK_VOLUME/ComfyUI/custom_nodes/ComfyUI-KJNod
 # Start ComfyUI
 echo "Starting ComfyUI"
 if [ "$enable_optimizations" = "false" ]; then
-    python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen
+    python "$NETWORK_VOLUME/ComfyUI/main.py" --listen --preview-method auto
 else
-    python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen --use-sage-attention
+    python "$NETWORK_VOLUME/ComfyUI/main.py" --listen --use-sage-attention --preview-method auto
     if [ $? -ne 0 ]; then
         echo "ComfyUI failed with --use-sage-attention. Retrying without it..."
-        python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen
+        python "$NETWORK_VOLUME/ComfyUI/main.py" --listen --preview-method auto
     fi
 fi
