@@ -4,128 +4,32 @@
 TCMALLOC="$(ldconfig -p | grep -Po "libtcmalloc.so.\d" | head -n 1)"
 export LD_PRELOAD="${TCMALLOC}"
 
-set -eo pipefail
-set +u
-
-if [[ "${IS_DEV,,}" =~ ^(true|1|t|yes)$ ]]; then
-    API_URL="http://64.176.170.64:8000"  # Replace with your development API URL
-    echo "Using development API endpoint"
+# This is in case there's any special installs or overrides that needs to occur when starting the machine before starting ComfyUI
+if [ -f "/workspace/additional_params.sh" ]; then
+    chmod +x /workspace/additional_params.sh
+    echo "Executing additional_params.sh..."
+    /workspace/additional_params.sh
 else
-    API_URL="http://64.176.168.207:8000"  # Replace with your production API URL
-    echo "Using production API endpoint"
+    echo "additional_params.sh not found in /workspace. Skipping..."
 fi
 
-URL="http://127.0.0.1:8188"
-
-# Function to report pod status
-  report_status() {
-    local status=$1
-    local details=$2
-
-    echo "Reporting status: $details"
-
-    curl -X POST "${API_URL}/pods/$RUNPOD_POD_ID/status" \
-      -H "Content-Type: application/json" \
-      -H "x-api-key: ${API_KEY}" \
-      -d "{\"initialized\": $status, \"details\": \"$details\"}" \
-      --silent
-
-    echo "Status reported: $status - $details"
-}
-report_status false "Starting initialization"
 # Set the network volume path
-# Determine the network volume based on environment
-# Check if /workspace exists
-if [ -d "/workspace" ]; then
-    NETWORK_VOLUME="/workspace"
-# If not, check if /runpod-volume exists
-elif [ -d "/runpod-volume" ]; then
-    NETWORK_VOLUME="/runpod-volume"
-# Fallback to root if neither directory exists
-else
-    echo "Warning: Neither /workspace nor /runpod-volume exists, falling back to root directory"
+NETWORK_VOLUME="/workspace"
+
+# Check if NETWORK_VOLUME exists; if not, use root directory instead
+if [ ! -d "$NETWORK_VOLUME" ]; then
+    echo "NETWORK_VOLUME directory '$NETWORK_VOLUME' does not exist. You are NOT using a network volume. Setting NETWORK_VOLUME to '/' (root directory)."
     NETWORK_VOLUME="/"
-fi
-
-echo "Using NETWORK_VOLUME: $NETWORK_VOLUME"
-pip install runpod
-FLAG_FILE="$NETWORK_VOLUME/.comfyui_initialized"
-COMFYUI_DIR="$NETWORK_VOLUME/ComfyUI"
-if [ "${IS_DEV:-false}" = "true" ]; then
-    REPO_DIR="$NETWORK_VOLUME/comfyui-discord-bot-dev"
-    BRANCH="dev"
-  else
-    REPO_DIR="$NETWORK_VOLUME/comfyui-discord-bot-master"
-    BRANCH="master"
-fi
-
-
-
-sync_bot_repo() {
-  echo "Syncing bot repo (branch: $BRANCH)..."
-  if [ ! -d "$REPO_DIR" ]; then
-    echo "Cloning '$BRANCH' into $REPO_DIR"
-    mkdir -p "$(dirname "$REPO_DIR")"
-    git clone --branch "$BRANCH" \
-      "https://${GITHUB_PAT}@github.com/Hearmeman24/comfyui-discord-bot.git" \
-      "$REPO_DIR"
-    echo "Clone complete"
-
-    echo "Installing Python deps..."
-    cd "$REPO_DIR"
-    # Add pip requirements installation here if needed
-    cd /
-  else
-    echo "Updating existing repo in $REPO_DIR"
-    cd "$REPO_DIR"
-
-    # Clean up any Python cache files
-    find . -name "*.pyc" -delete 2>/dev/null || true
-    find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
-
-    # Then proceed with git operations
-    git fetch origin
-    git checkout "$BRANCH"
-
-    # Try pull, if it fails do hard reset
-    git pull origin "$BRANCH" || {
-      echo "Pull failed, using force reset"
-      git fetch origin "$BRANCH"
-      git reset --hard "origin/$BRANCH"
-    }
-    cd /
-  fi
-}
-
-if [ -f "$FLAG_FILE" ]; then
-  echo "FLAG FILE FOUND"
-
-  sync_bot_repo
-
-  echo "▶️  Starting ComfyUI"
-  # group both the main and fallback commands so they share the same log
-  mkdir -p "$NETWORK_VOLUME/${RUNPOD_POD_ID}"
-  nohup bash -c "python3 \"$NETWORK_VOLUME\"/ComfyUI/main.py --listen 2>&1 | tee \"$NETWORK_VOLUME\"/comfyui_\"$RUNPOD_POD_ID\"_nohup.log" &
-
-  until curl --silent --fail "$URL" --output /dev/null; do
-      echo "🔄  Still waiting…"
-      sleep 2
-  done
-
-  echo "ComfyUI is UP Starting worker"
-  nohup bash -c "python3 \"$REPO_DIR\"/worker.py 2>&1 | tee \"$NETWORK_VOLUME\"/\"$RUNPOD_POD_ID\"/worker.log" &
-
-  report_status true "Pod fully initialized and ready for processing"
-  echo "Initialization complete! Pod is ready to process jobs."
-
-  # Wait on background jobs forever
-  wait
-
+    echo "NETWORK_VOLUME directory doesn't exist. Starting JupyterLab on root directory..."
+    jupyter-lab --ip=0.0.0.0 --allow-root --no-browser --NotebookApp.token='' --NotebookApp.password='' --ServerApp.allow_origin='*' --ServerApp.allow_credentials=True --notebook-dir=/ &
 else
-  echo "NO FLAG FILE FOUND – starting initial setup"
+    echo "NETWORK_VOLUME directory exists. Starting JupyterLab..."
+    jupyter-lab --ip=0.0.0.0 --allow-root --no-browser --NotebookApp.token='' --NotebookApp.password='' --ServerApp.allow_origin='*' --ServerApp.allow_credentials=True --notebook-dir=/workspace &
 fi
 
-sync_bot_repo
+COMFYUI_DIR="$NETWORK_VOLUME/ComfyUI"
+WORKFLOW_DIR="$NETWORK_VOLUME/ComfyUI/user/default/workflows"
+
 # Set the target directory
 CUSTOM_NODES_DIR="$NETWORK_VOLUME/ComfyUI/custom_nodes"
 
@@ -142,16 +46,6 @@ chmod +x "/usr/local/bin/download.py" || { echo "Chmod failed"; exit 1; }
 rm -rf CivitAI_Downloader  # Clean up the cloned repo
 pip install huggingface_hub
 pip install onnxruntime-gpu
-
-
-
-if [ "$enable_optimizations" == "true" ]; then
-echo "Downloading Triton"
-pip install triton
-fi
-
-# Determine which branch to use
-
 
 # Change to the directory
 cd "$CUSTOM_NODES_DIR" || exit 1
@@ -196,17 +90,84 @@ TEXT_ENCODERS_DIR="$NETWORK_VOLUME/ComfyUI/models/text_encoders"
 CLIP_VISION_DIR="$NETWORK_VOLUME/ComfyUI/models/clip_vision"
 VAE_DIR="$NETWORK_VOLUME/ComfyUI/models/vae"
 
+# Download quantized models
+if [ "$download_quantized_model" == "true" ]; then
+  echo "Downloading quantized models..."
+
+  download_model "$DIFFUSION_MODELS_DIR" "Wan2_1-T2V-14B_fp8_e4m3fn.safetensors" \
+    "Kijai/WanVideo_comfy" "Wan2_1-T2V-14B_fp8_e4m3fn.safetensors"
+
+  download_model "$DIFFUSION_MODELS_DIR" "Wan2_1-I2V-14B-720P_fp8_e4m3fn.safetensors" \
+    "Kijai/WanVideo_comfy" "Wan2_1-I2V-14B-720P_fp8_e4m3fn.safetensors"
+
+  download_model "$DIFFUSION_MODELS_DIR" "wan2.1_t2v_1.3B_fp16.safetensors" \
+    "Comfy-Org/Wan_2.1_ComfyUI_repackaged" "split_files/diffusion_models/wan2.1_t2v_1.3B_fp16.safetensors"
+fi
+
 # Download 480p native models
-echo "Downloading 480p native models..."
+if [ "$download_480p_native_models" == "true" ]; then
+  echo "Downloading 480p native models..."
 
-download_model "$DIFFUSION_MODELS_DIR" "wan2.1_i2v_480p_14B_bf16.safetensors" \
-  "Comfy-Org/Wan_2.1_ComfyUI_repackaged" "split_files/diffusion_models/wan2.1_i2v_480p_14B_bf16.safetensors"
+  download_model "$DIFFUSION_MODELS_DIR" "wan2.1_i2v_480p_14B_bf16.safetensors" \
+    "Comfy-Org/Wan_2.1_ComfyUI_repackaged" "split_files/diffusion_models/wan2.1_i2v_480p_14B_bf16.safetensors"
 
-download_model "$DIFFUSION_MODELS_DIR" "wan2.1_t2v_14B_bf16.safetensors" \
-  "Comfy-Org/Wan_2.1_ComfyUI_repackaged" "split_files/diffusion_models/wan2.1_t2v_14B_bf16.safetensors"
+  download_model "$DIFFUSION_MODELS_DIR" "wan2.1_t2v_14B_bf16.safetensors" \
+    "Comfy-Org/Wan_2.1_ComfyUI_repackaged" "split_files/diffusion_models/wan2.1_t2v_14B_bf16.safetensors"
 
-download_model "$DIFFUSION_MODELS_DIR" "wan2.1_t2v_1.3B_fp16.safetensors" \
-  "Comfy-Org/Wan_2.1_ComfyUI_repackaged" "split_files/diffusion_models/wan2.1_t2v_1.3B_fp16.safetensors"
+  download_model "$DIFFUSION_MODELS_DIR" "wan2.1_t2v_1.3B_fp16.safetensors" \
+    "Comfy-Org/Wan_2.1_ComfyUI_repackaged" "split_files/diffusion_models/wan2.1_t2v_1.3B_fp16.safetensors"
+fi
+
+# Handle full download (with SDXL)
+if [ "$download_wan_fun_and_sdxl_helper" == "true" ]; then
+  echo "Downloading Wan Fun 1.3B Model"
+
+  download_model "$DIFFUSION_MODELS_DIR" "Wan2.1-Fun-Control1.3B.safetensors" \
+    "alibaba-pai/Wan2.1-Fun-1.3B-Control" "diffusion_pytorch_model.safetensors"
+
+  echo "Downloading Wan Fun 14B Model"
+
+  download_model "$DIFFUSION_MODELS_DIR" "Wan2.1-Fun-Control14B.safetensors" \
+    "alibaba-pai/Wan2.1-Fun-14B-Control" "diffusion_pytorch_model.safetensors"
+
+  UNION_DIR="$NETWORK_VOLUME/ComfyUI/models/controlnet/SDXL/controlnet-union-sdxl-1.0"
+  mkdir -p "$UNION_DIR"
+  if [ ! -f "$UNION_DIR/diffusion_pytorch_model_promax.safetensors" ]; then
+    download_model "$UNION_DIR" "diffusion_pytorch_model_promax.safetensors" \
+    "xinsir/controlnet-union-sdxl-1.0" "diffusion_pytorch_model_promax.safetensors"
+  fi
+fi
+
+if [ "$download_vace" == "true" ]; then
+  echo "Downloading Wan 1.3B"
+
+  download_model "$DIFFUSION_MODELS_DIR" "wan2.1_t2v_1.3B_fp16.safetensors" \
+    "Comfy-Org/Wan_2.1_ComfyUI_repackaged" "split_files/diffusion_models/wan2.1_t2v_1.3B_fp16.safetensors"
+
+  echo "Downloading VACE 1.3B Model"
+
+  download_model "$DIFFUSION_MODELS_DIR" "Wan2_1_VACE_1_3B_preview_bf16.safetensors" \
+    "Kijai/WanVideo_comfy" "Wan2_1_VACE_1_3B_preview_bf16.safetensors"
+
+  echo "Downloading VACE text encoder"
+
+  download_model "$TEXT_ENCODERS_DIR" "umt5-xxl-enc-bf16.safetensors" \
+    "Kijai/WanVideo_comfy" "umt5-xxl-enc-bf16.safetensors"
+fi
+
+# Download 720p native models
+if [ "$download_720p_native_models" == "true" ]; then
+  echo "Downloading 720p native models..."
+
+  download_model "$DIFFUSION_MODELS_DIR" "wan2.1_i2v_720p_14B_bf16.safetensors" \
+    "Comfy-Org/Wan_2.1_ComfyUI_repackaged" "split_files/diffusion_models/wan2.1_i2v_720p_14B_bf16.safetensors"
+
+  download_model "$DIFFUSION_MODELS_DIR" "wan2.1_t2v_14B_bf16.safetensors" \
+    "Comfy-Org/Wan_2.1_ComfyUI_repackaged" "split_files/diffusion_models/wan2.1_t2v_14B_bf16.safetensors"
+
+  download_model "$DIFFUSION_MODELS_DIR" "wan2.1_t2v_1.3B_fp16.safetensors" \
+    "Comfy-Org/Wan_2.1_ComfyUI_repackaged" "split_files/diffusion_models/wan2.1_t2v_1.3B_fp16.safetensors"
+fi
 
 # Download text encoders
 echo "Downloading text encoders..."
@@ -233,6 +194,10 @@ download_model "$VAE_DIR" "wan_2.1_vae.safetensors" \
 # Download upscale model
 echo "Downloading upscale models"
 mkdir -p "$NETWORK_VOLUME/ComfyUI/models/upscale_models"
+if [ ! -f "$NETWORK_VOLUME/ComfyUI/models/upscale_models/4x_foolhardy_Remacri.pt" ]; then
+    wget -O "$NETWORK_VOLUME/ComfyUI/models/upscale_models/4x_foolhardy_Remacri.pt" \
+    https://huggingface.co/FacehugmanIII/4x_foolhardy_Remacri/resolve/main/4x_foolhardy_Remacri.pth
+fi
 if [ ! -f "$NETWORK_VOLUME/ComfyUI/models/upscale_models/4xLSDIR.pth" ]; then
     if [ -f "/4xLSDIR.pth" ]; then
         mv "/4xLSDIR.pth" "$NETWORK_VOLUME/ComfyUI/models/upscale_models/4xLSDIR.pth"
@@ -253,35 +218,47 @@ fi
 
 echo "Finished downloading models!"
 
-echo "Downloading LoRAs"
 
-mkdir -p "$NETWORK_VOLUME/ComfyUI/models/loras" && \
-(gdown "1IfTa_Z_SSDFz7x0ootJu293qsxf19FEZ" -O "$NETWORK_VOLUME/ComfyUI/models/loras/Wan_ClothesOnOff_Trend.safetensors" || \
-echo "Download failed for Wan_ClothesOnOff_Trend.safetensors, continuing...")
+echo "Checking and copying workflow..."
+mkdir -p "$WORKFLOW_DIR"
 
+# Ensure the file exists in the current directory before moving it
+cd /
 
+SOURCE_DIR="/comfyui-wan/workflows"
 
-declare -A MODEL_CATEGORY_FILES=(
-    ["$NETWORK_VOLUME/ComfyUI/models/checkpoints"]="$NETWORK_VOLUME/comfyui-discord-bot/downloads/checkpoint_to_download.txt"
-    ["$NETWORK_VOLUME/ComfyUI/models/loras"]="$NETWORK_VOLUME/comfyui-discord-bot/downloads/lora_to_download.txt"
+# Ensure destination directory exists
+mkdir -p "$WORKFLOW_DIR"
+
+# Loop over each file in the source directory
+for file in "$SOURCE_DIR"/*; do
+    # Skip if it's not a file
+    [[ -f "$file" ]] || continue
+
+    dest_file="$WORKFLOW_DIR/$(basename "$file")"
+
+    if [[ -e "$dest_file" ]]; then
+        echo "File already exists in destination. Deleting: $file"
+        rm -f "$file"
+    else
+        echo "Moving: $file to $WORKFLOW_DIR"
+        mv "$file" "$WORKFLOW_DIR"
+    fi
+done
+
+declare -A MODEL_CATEGORIES=(
+    ["$NETWORK_VOLUME/ComfyUI/models/checkpoints"]="CHECKPOINT_IDS_TO_DOWNLOAD"
+    ["$NETWORK_VOLUME/ComfyUI/models/loras"]="LORAS_IDS_TO_DOWNLOAD"
 )
 
 # Ensure directories exist and download models
-for TARGET_DIR in "${!MODEL_CATEGORY_FILES[@]}"; do
-    CONFIG_FILE="${MODEL_CATEGORY_FILES[$TARGET_DIR]}"
+for TARGET_DIR in "${!MODEL_CATEGORIES[@]}"; do
+    ENV_VAR_NAME="${MODEL_CATEGORIES[$TARGET_DIR]}"
+    MODEL_IDS_STRING="${!ENV_VAR_NAME}"  # Get the value of the environment variable
 
-    # Skip if the file doesn't exist
-    if [ ! -f "$CONFIG_FILE" ]; then
-        echo "Skipping downloads for $TARGET_DIR (file $CONFIG_FILE not found)"
-        continue
-    fi
-
-    # Read comma-separated model IDs from the file
-    MODEL_IDS_STRING=$(cat "$CONFIG_FILE")
-
-    # Skip if the file is empty or contains placeholder text
-    if [ -z "$MODEL_IDS_STRING" ] || [ "$MODEL_IDS_STRING" == "replace_with_ids" ]; then
-        echo "Skipping downloads for $TARGET_DIR ($CONFIG_FILE is empty or contains placeholder)"
+    # Skip if the environment variable is set to "ids_here"
+    if [ "$MODEL_IDS_STRING" == "replace_with_ids" ]; then
+        echo "Skipping downloads for $TARGET_DIR ($ENV_VAR_NAME is 'ids_here')"
         continue
     fi
 
@@ -290,16 +267,21 @@ for TARGET_DIR in "${!MODEL_CATEGORY_FILES[@]}"; do
 
     for MODEL_ID in "${MODEL_IDS[@]}"; do
         echo "Downloading model: $MODEL_ID to $TARGET_DIR"
-        (cd "$TARGET_DIR" && download.py --model "$MODEL_ID") || {
-            echo "ERROR: Failed to download model $MODEL_ID to $TARGET_DIR, continuing with next model..."
-        }
+        (cd "$TARGET_DIR" && download.py --model "$MODEL_ID")
     done
 done
 
 # Workspace as main working directory
 echo "cd $NETWORK_VOLUME" >> ~/.bashrc
-echo "cd $NETWORK_VOLUME" >> ~/.bash_profile
 
+if [ ! -d "$NETWORK_VOLUME/ComfyUI/custom_nodes/ComfyUI-WanVideoWrapper" ]; then
+    cd $NETWORK_VOLUME/ComfyUI/custom_nodes
+    git clone https://github.com/kijai/ComfyUI-WanVideoWrapper.git
+else
+    echo "Updating WanVideoWrapper"
+    cd $NETWORK_VOLUME/ComfyUI/custom_nodes/ComfyUI-WanVideoWrapper
+    git pull
+fi
 if [ ! -d "$NETWORK_VOLUME/ComfyUI/custom_nodes/ComfyUI-KJNodes" ]; then
     cd $NETWORK_VOLUME/ComfyUI/custom_nodes
     git clone https://github.com/kijai/ComfyUI-KJNodes.git
@@ -310,23 +292,17 @@ else
 fi
 
 # Install dependencies
+pip install --no-cache-dir -r $NETWORK_VOLUME/ComfyUI/custom_nodes/ComfyUI-WanVideoWrapper/requirements.txt
 pip install --no-cache-dir -r $NETWORK_VOLUME/ComfyUI/custom_nodes/ComfyUI-KJNodes/requirements.txt
+
+# Start ComfyUI
 echo "Starting ComfyUI"
-touch "$FLAG_FILE"
-mkdir -p "$NETWORK_VOLUME/${RUNPOD_POD_ID}"
-nohup bash -c "python3 \"$NETWORK_VOLUME\"/ComfyUI/main.py --listen 2>&1 | tee \"$NETWORK_VOLUME\"/comfyui_\"$RUNPOD_POD_ID\"_nohup.log" &
-COMFY_PID=$!
-
-until curl --silent --fail "$URL" --output /dev/null; do
-    echo "🔄  Still waiting…"
-    sleep 2
-done
-
-echo "ComfyUI is UP Starting worker"
-nohup bash -c "python3 \"$REPO_DIR\"/worker.py 2>&1 | tee \"$NETWORK_VOLUME\"/\"$RUNPOD_POD_ID\"/worker.log" &
-WORKER_PID=$!
-
-report_status true "Pod fully initialized and ready for processing"
-echo "Initialization complete! Pod is ready to process jobs."
-# Wait for both processes
-wait $COMFY_PID $WORKER_PID
+if [ "$enable_optimizations" = "false" ]; then
+    python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen
+else
+    python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen --use-sage-attention
+    if [ $? -ne 0 ]; then
+        echo "ComfyUI failed with --use-sage-attention. Retrying without it..."
+        python3 "$NETWORK_VOLUME/ComfyUI/main.py" --listen
+    fi
+fi
