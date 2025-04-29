@@ -1,24 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Decide which branch to clone
-if [ "${IS_DEV:-false}" = "true" ]; then
-  BRANCH="dev"
-else
-  BRANCH="master"
-fi
-
 # Check if directory exists and remove it or update it
-if [ -d "ComfyUI-Bot-Wan-Template" ]; then
+if [ -d "ComfyUI-Wan-Template-5090" ]; then
   echo "📂 Directory already exists. Removing it first..."
-  rm -rf ComfyUI-Bot-Wan-Template
+  rm -rf ComfyUI-Wan-Template-5090
 fi
 
-echo "📥 Cloning branch '$BRANCH' of ComfyUI-Bot-Wan-Template…"
-git clone --branch "$BRANCH" https://github.com/Hearmeman24/ComfyUI-Bot-Wan-Template.git
+echo "📥 Cloning ComfyUI-Wan-Template-5090…"
+git clone https://github.com/Hearmeman24/ComfyUI-Wan-Template-5090.git
 
 echo "📂 Moving start.sh into place…"
-mv ComfyUI-Bot-Wan-Template/src/start.sh /
+mv ComfyUI-Wan-Template-5090/src/start.sh /
 
 echo "▶️ Running start.sh"
 bash /start.sh
