@@ -93,6 +93,10 @@ RUN for repo in \
         fi; \
     done
 
+
+COPY sageattention-2.1.1-cp312-cp312-linux_x86_64.whl /tmp/
+RUN pip install /tmp/sageattention-2.1.1-cp312-cp312-linux_x86_64.whl
+
 COPY src/start_script.sh /start_script.sh
 RUN chmod +x /start_script.sh
 COPY 4xLSDIR.pth /4xLSDIR.pth
