@@ -24,8 +24,8 @@ jobs:
           name: Build & push
           command: |
             TAG="${CIRCLE_TAG:-latest}"
-            docker build --progress=plain -t "docker.io/$DOCKERHUB_USER/comfyui-discord-bot-wan:${TAG}" .
-            docker push "docker.io/$DOCKERHUB_USER/comfyui-discord-bot-wan:${TAG}"
+            docker build --progress=plain -t "docker.io/$DOCKERHUB_USER/comfyui-wan-template-5090:${TAG}" .
+            docker push "docker.io/$DOCKERHUB_USER/comfyui-wan-template-5090:${TAG}"
 
 workflows:
   version: 2
