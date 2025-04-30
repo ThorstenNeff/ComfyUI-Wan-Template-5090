@@ -19,7 +19,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     ln -sf /usr/bin/python3.12 /usr/bin/python && \
     ln -sf /usr/bin/pip3 /usr/bin/pip && \
     \
-    # Create and activate virtual environment
     python3.12 -m venv /opt/venv && \
     \
     apt-get clean && rm -rf /var/lib/apt/lists/*
