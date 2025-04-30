@@ -90,26 +90,12 @@ TEXT_ENCODERS_DIR="$NETWORK_VOLUME/ComfyUI/models/text_encoders"
 CLIP_VISION_DIR="$NETWORK_VOLUME/ComfyUI/models/clip_vision"
 VAE_DIR="$NETWORK_VOLUME/ComfyUI/models/vae"
 
-# Download quantized models
-if [ "$download_quantized_model" == "true" ]; then
-  echo "Downloading quantized models..."
-
-  download_model "$DIFFUSION_MODELS_DIR" "Wan2_1-T2V-14B_fp8_e4m3fn.safetensors" \
-    "Kijai/WanVideo_comfy" "Wan2_1-T2V-14B_fp8_e4m3fn.safetensors"
-
-  download_model "$DIFFUSION_MODELS_DIR" "Wan2_1-I2V-14B-720P_fp8_e4m3fn.safetensors" \
-    "Kijai/WanVideo_comfy" "Wan2_1-I2V-14B-720P_fp8_e4m3fn.safetensors"
-
-  download_model "$DIFFUSION_MODELS_DIR" "wan2.1_t2v_1.3B_fp16.safetensors" \
-    "Comfy-Org/Wan_2.1_ComfyUI_repackaged" "split_files/diffusion_models/wan2.1_t2v_1.3B_fp16.safetensors"
-fi
-
 # Download 480p native models
 if [ "$download_480p_native_models" == "true" ]; then
   echo "Downloading 480p native models..."
 
-  download_model "$DIFFUSION_MODELS_DIR" "wan2.1_i2v_480p_14B_bf16.safetensors" \
-    "Comfy-Org/Wan_2.1_ComfyUI_repackaged" "split_files/diffusion_models/wan2.1_i2v_480p_14B_bf16.safetensors"
+  download_model "$DIFFUSION_MODELS_DIR" "Wan2_1-I2V-14B-480P_fp8_e5m2.safetensors" \
+    "Kijai/WanVideo_comfy" "Wan2_1-I2V-14B-480P_fp8_e5m2.safetensors"
 
   download_model "$DIFFUSION_MODELS_DIR" "wan2.1_t2v_14B_bf16.safetensors" \
     "Comfy-Org/Wan_2.1_ComfyUI_repackaged" "split_files/diffusion_models/wan2.1_t2v_14B_bf16.safetensors"
@@ -225,7 +211,7 @@ mkdir -p "$WORKFLOW_DIR"
 # Ensure the file exists in the current directory before moving it
 cd /
 
-SOURCE_DIR="/comfyui-wan/workflows"
+SOURCE_DIR="/ComfyUI-Wan-Template-5090/workflows"
 
 # Ensure destination directory exists
 mkdir -p "$WORKFLOW_DIR"
