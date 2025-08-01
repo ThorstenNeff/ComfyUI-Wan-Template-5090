@@ -28,7 +28,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install torch==2.8.0 torchvision==0.17.0 torchaudio==2.8.0  \
-        --index-url https://download.pytorch.org/whl/nightly/cu128
+        --index-url https://download.pytorch.org/whl/cu121
+# https://download.pytorch.org/whl/nightly/cu128
 
 # Core Python tooling
 RUN --mount=type=cache,target=/root/.cache/pip \
