@@ -27,7 +27,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 ENV PATH="/opt/venv/bin:$PATH"
 
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --pre torch torchvision torchaudio \
+    pip install torch==2.8.0 torchvision==0.17.0 torchaudio==2.8.0  \
         --index-url https://download.pytorch.org/whl/nightly/cu128
 
 # Core Python tooling

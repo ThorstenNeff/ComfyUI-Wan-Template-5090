@@ -292,3 +292,15 @@ else
         python "$NETWORK_VOLUME/ComfyUI/main.py" --listen --preview-method auto
     fi
 fi
+
+cd /workspace/diffusion-pipe
+
+# Installiere zusätzliche Pakete
+pip install ninja
+pip install --upgrade setuptools
+
+# Installiere FlashAttention (für PyTorch 2.8 + CUDA 12)
+pip install https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.0.post2/flash_attn-2.8.0.post2+cu12torch2.7cxx11abiTRUE-cp312-cp312-linux_x86_64.whl
+
+# Installiere Projektabhängigkeiten
+pip install -r requirements.txt
